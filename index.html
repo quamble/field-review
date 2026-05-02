@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2D5A8C">
+    <meta name="description" content="Field Review Documentation App - Professional field reports with photos and voice memos">
+    <title>Field Review App</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%232D5A8C' width='180' height='180'/><text x='50%' y='50%' font-size='100' fill='white' text-anchor='middle' dominant-baseline='central'>📋</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--color-background-tertiary, #f5f5f5);
+            color: var(--color-text-primary, #1a1a1a);
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 100%;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2D5A8C 0%, #1e3a5f 100%);
+            color: white;
+            padding: 1.5rem 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header p {
+            font-size: 13px;
+            opacity: 0.9;
+            margin: 0.25rem 0 0;
+        }
+
+        .sync-status {
+            display: inline-block;
+            font-size: 11px;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            margin-left: auto;
+        }
+
+        .sync-status.synced {
+            background: rgba(81,207,102,0.3);
+        }
+
+        .sync-status.error {
+            background: rgba(255,107,107,0.3);
+        }
+
+        .screen {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== PROJECT LIST SCREEN ===== */
+        .projects-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+        }
+
+        .project-card {
+            background: white;
+            border: 0.5px solid var(--color-border-tertiary, #ddd);
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .project-card:hover {
+            border-color: var(--color-border-secondary, #999);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .project-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .project-name {
+            font-weight: 500;
+            font-size: 14px;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+
+        .project-meta {
+            font-size: 12px;
+            color: var(--color-text-secondary, #666);
+        }
+
+        .new-project-card {
+            background: linear-gradient(135deg, #e8f1fa 0%, #f0f8ff 100%);
+            border: 1px dashed #5a9fd4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 120px;
+        }
+
+        .new-project-card:hover {
+            border-color: #2D5A8C;
+            background: linear-gradient(135deg, #d4e8f5 0%, #e8f5ff 100%);
+        }
+
+        .add-btn {
+            font-size: 36px;
+            color: #2D5A8C;
+        }
+
+        /* ===== PROJECT DETAIL SCREEN ===== */
+        .project-detail {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .photo-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+            border: 0.5px solid var(--color-border-tertiary, #ddd);
+            cursor: pointer;
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .photo-badge {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(45, 90, 140, 0.85);
+            color: white;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .photo-actions {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .photo-item:hover .photo-actions {
+            opacity: 1;
+        }
+
+        .icon-btn {
+            background: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: transform 0.1s;
+        }
+
+        .icon-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* ===== CAMERA/VOICE SCREENS ===== */
+        .camera-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .video-preview {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-preview {
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 0.5px solid var(--color-border-tertiary, #ddd);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: 0.5px solid var(--color-border-secondary, #999);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: var(--color-background-secondary, #f9f9f9);
+            border-color: var(--color-border-primary, #666);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: #2D5A8C;
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: #1e3a5f;
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+        }
+
+        .btn-danger:hover {
+            background: #ff5252;
+        }
+
+        .btn-success {
+            background: #51cf66;
+            color: white;
+            border: none;
+        }
+
+        .btn-success:hover {
+            background: #40c057;
+        }
+
+        /* ===== VOICE MEMO SCREEN ===== */
+        .voice-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+            padding: 2rem 1rem;
+        }
+
+        .recording-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .recording-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .recording-dot.inactive {
+            animation: none;
+            background: #ccc;
+        }
+
+        .waveform {
+            width: 100%;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            background: var(--color-background-secondary, #f9f9f9);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .wave-bar {
+            width: 4px;
+            background: #2D5A8C;
+            border-radius: 2px;
+        }
+
+        .memo-playback {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        .transcription {
+            background: var(--color-background-secondary, #f9f9f9);
+            border: 0.5px solid var(--color-border-tertiary, #ddd);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            min-height: 60px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* ===== SETTINGS SCREEN ===== */
+        .settings-section {
+            background: white;
+            border: 0.5px solid var(--color-border-tertiary, #ddd);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 1rem;
+        }
+
+        .settings-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 0.5px solid var(--color-border-tertiary, #ddd);
+        }
+
+        .setting-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .setting-label {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .setting-input {
+            width: 100%;
+            padding: 12px;
+            border: 0.5px solid var(--color-border-tertiary, #ddd);
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        /* ===== MODAL ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            border: 0.5px solid var(--color-border-tertiary, #ddd);
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 1rem;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .status-message {
+            background: var(--color-background-success, #e8f5e9);
+            color: var(--color-text-success, #2e7d32);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 14px;
+        }
+
+        .status-message.error {
+            background: var(--color-background-danger, #ffebee);
+            color: var(--color-text-danger, #c62828);
+        }
+
+        .status-message.warning {
+            background: var(--color-background-warning, #fff3e0);
+            color: var(--color-text-warning, #e65100);
+        }
+
+        .progress-text {
+            text-align: center;
+            margin: 1rem 0;
+            font-size: 14px;
+            color: var(--color-text-secondary, #666);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-top-color: #2D5A8C;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .server-status {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 0.5px solid var(--color-border-tertiary, #ddd);
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .server-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #51cf66;
+            margin-right: 4px;
+        }
+
+        .server-indicator.offline {
+            background: #ff6b6b;
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .sync-status {
+                margin-left: 0;
+                margin-top: 8px;
+                display: block;
+                width: fit-content;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 8px;">
+                <h1>📋 Field Review</h1>
+                <div class="sync-status" id="syncStatus">
+                    <span id="syncIndicator">⚙️ Syncing...</span>
+                </div>
+            </div>
+            <p>Professional field documentation with AI transcription</p>
+        </div>
+
+        <!-- ===== PROJECT LIST SCREEN ===== -->
+        <div id="projectListScreen" class="screen active">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px;">
+                <h2 style="font-size: 18px; font-weight: 500; margin: 0;">Projects</h2>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-primary" onclick="app.showModal('new-project')">+ New</button>
+                    <button onclick="app.showScreen('settingsScreen'); app.goToTab('storage')" style="background: none; border: none; font-size: 18px; cursor: pointer;">⚙️</button>
+                </div>
+            </div>
+            <div class="projects-list" id="projectsList">
+                <div class="project-card new-project-card" onclick="app.showModal('new-project')">
+                    <div>
+                        <div class="add-btn">+</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== PROJECT DETAIL SCREEN ===== -->
+        <div id="projectDetailScreen" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 id="projectTitle" style="font-size: 18px; font-weight: 500; margin: 0;">Project</h2>
+                <button onclick="app.goBack()" style="background: none; border: none; font-size: 24px; cursor: pointer;">←</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem;">
+                <button class="btn-primary" onclick="app.startCamera()" style="flex: 1;">📷 Take Photo</button>
+                <button class="btn-primary" onclick="app.goToVoiceScreen('new')" style="flex: 1;">🎤 Voice Memo</button>
+            </div>
+
+            <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 0.5rem;">Photos & Memos</h3>
+            <div style="color: var(--color-text-secondary, #666); font-size: 13px; margin-bottom: 1rem;" id="photoCount">0 items</div>
+
+            <div class="photo-grid" id="photoGrid"></div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: auto;">
+                <button class="btn-danger" onclick="app.deleteProject()">🗑️ Delete</button>
+                <button class="btn-success" onclick="app.prepareExport()">📄 Export</button>
+            </div>
+        </div>
+
+        <!-- ===== CAMERA SCREEN ===== -->
+        <div id="cameraScreen" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="font-size: 18px; font-weight: 500; margin: 0;">Take Photo</h2>
+            </div>
+
+            <div class="camera-container">
+                <div id="cameraMode">
+                    <div class="video-preview">
+                        <video id="video" playsinline autoplay></video>
+                    </div>
+                    <div class="controls">
+                        <button class="btn-danger" onclick="app.closeCamera()">Cancel</button>
+                        <button class="btn-success" onclick="app.capturePhoto()" style="font-size: 16px;">📸 Capture</button>
+                    </div>
+                </div>
+
+                <div id="previewMode" style="display: none;">
+                    <img id="photoPreview" class="photo-preview" />
+                    <div class="controls">
+                        <button class="btn-danger" onclick="app.retakePhoto()">❌ Retake</button>
+                        <button class="btn-success" onclick="app.goToVoiceScreen('new')">✓ Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== VOICE MEMO SCREEN ===== -->
+        <div id="voiceMemoScreen" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 18px; font-weight: 500; margin: 0;">Voice Memo</h2>
+            </div>
+
+            <div id="recordingMode">
+                <div class="voice-container">
+                    <div class="recording-indicator">
+                        <div style="text-align: center;">
+                            <div style="font-size: 14px; font-weight: 500; margin-bottom: 0.5rem;">Recording...</div>
+                            <div class="recording-dot"></div>
+                        </div>
+                    </div>
+                    <div class="waveform" id="waveform"></div>
+                    <div class="controls" style="margin-top: 1rem;">
+                        <button class="btn-danger" onclick="app.discardMemo()">Skip Memo</button>
+                        <button class="btn-success" onclick="app.stopRecording()">Stop Recording</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="playbackMode" style="display: none;">
+                <div class="voice-container">
+                    <div style="width: 100%;">
+                        <div style="font-size: 13px; color: var(--color-text-secondary, #666); margin-bottom: 0.5rem;">Transcription (AI-powered):</div>
+                        <div style="position: relative;">
+                            <div id="transcriptionText" class="transcription">Processing audio...</div>
+                            <div id="transcriptionSpinner" style="text-align: center; padding: 20px;">
+                                <div class="spinner"></div>
+                                <div style="font-size: 12px; color: var(--color-text-secondary, #666); margin-top: 8px;">Transcribing with OpenAI Whisper...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="controls">
+                        <button class="btn-danger" onclick="app.discardMemo()">Discard</button>
+                        <button class="btn-primary" onclick="app.editTranscription()">Edit</button>
+                        <button class="btn-success" onclick="app.saveMemo()" id="saveMemoBtn" disabled>Save & Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== EXPORT SCREEN ===== -->
+        <div id="exportScreen" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="font-size: 18px; font-weight: 500; margin: 0;">Export Report</h2>
+                <button onclick="app.goBack()" style="background: none; border: none; font-size: 24px; cursor: pointer;">←</button>
+            </div>
+
+            <div id="exportForm">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; font-size: 14px;">Report Title</label>
+                    <input id="reportTitle" class="modal-input" type="text" placeholder="e.g., Building A - HVAC Review" />
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; font-size: 14px;">Date (Optional)</label>
+                    <input id="reportDate" class="modal-input" type="date" />
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; font-size: 14px;">Notes (Optional)</label>
+                    <textarea id="reportNotes" class="modal-input" style="height: 100px; resize: none;" placeholder="Additional observations..."></textarea>
+                </div>
+
+                <div id="exportStatus"></div>
+
+                <div class="controls">
+                    <button class="btn-danger" onclick="app.goBack()">Cancel</button>
+                    <button class="btn-success" onclick="app.exportToWord()" id="exportBtn">Generate Word Doc</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== SETTINGS SCREEN ===== -->
+        <div id="settingsScreen" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 18px; font-weight: 500; margin: 0;">Settings</h2>
+                <button onclick="app.goBack()" style="background: none; border: none; font-size: 24px; cursor: pointer;">←</button>
+            </div>
+
+            <div class="settings-section">
+                <h3>Server Connection</h3>
+                <div class="setting-item">
+                    <div>
+                        <div class="setting-label">API Server URL</div>
+                        <div style="font-size: 12px; color: var(--color-text-secondary, #666);">Backend for reports & transcription</div>
+                    </div>
+                </div>
+                <input id="serverUrl" class="setting-input" type="text" placeholder="http://localhost:3000" value="http://localhost:3000" />
+                <button class="btn-primary" onclick="app.testConnection()" style="width: 100%;">Test Connection</button>
+                <div id="connectionStatus" style="margin-top: 8px; font-size: 12px;"></div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Cloud Storage (Optional)</h3>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; font-size: 14px;">
+                        <input type="checkbox" id="googleDriveEnabled" onchange="app.toggleCloudStorage('drive')" style="margin-right: 8px;" />
+                        Enable Google Drive Backup
+                    </label>
+                    <button class="btn-primary" id="googleDriveBtn" style="width: 100%; display: none;" onclick="app.connectGoogleDrive()">Connect Google Drive</button>
+                </div>
+
+                <div>
+                    <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; font-size: 14px;">
+                        <input type="checkbox" id="dropboxEnabled" onchange="app.toggleCloudStorage('dropbox')" style="margin-right: 8px;" />
+                        Enable Dropbox Backup
+                    </label>
+                    <button class="btn-primary" id="dropboxBtn" style="width: 100%; display: none;" onclick="app.connectDropbox()">Connect Dropbox</button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Data Management</h3>
+                <button class="btn-danger" onclick="app.clearAllData()" style="width: 100%;">Clear All Local Data</button>
+                <div style="font-size: 12px; color: var(--color-text-secondary, #666); margin-top: 8px;">⚠️ This will permanently delete all projects stored locally (not backed up)</div>
+            </div>
+
+            <div class="server-status">
+                <div><span class="server-indicator" id="serverIndicator"></span><span id="serverText">Checking server...</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODALS ===== -->
+    <div id="newProjectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">New Project</div>
+            <input id="projectNameInput" class="modal-input" type="text" placeholder="Project name (e.g., Building A, Room 203)" autofocus />
+            <div class="modal-buttons">
+                <button onclick="app.closeModal()">Cancel</button>
+                <button class="btn-primary" onclick="app.createProject()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editTranscriptionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">Edit Transcription</div>
+            <textarea id="transcriptionInput" class="modal-input" style="height: 120px; resize: none;"></textarea>
+            <div class="modal-buttons">
+                <button onclick="app.closeModal()">Cancel</button>
+                <button class="btn-primary" onclick="app.updateTranscription()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== APP STATE ===== 
+        const app = {
+            currentProject: null,
+            currentPhoto: null,
+            currentAudioBlob: null,
+            mediaRecorder: null,
+            audioChunks: [],
+            stream: null,
+            state: {},
+            serverUrl: 'http://localhost:3000',
+            cloudStorageEnabled: { drive: false, dropbox: false },
+
+            // ===== INIT ===== 
+            init() {
+                this.loadState();
+                this.loadSettings();
+                this.renderProjectList();
+                this.setupServiceWorker();
+                this.checkServerStatus();
+                setInterval(() => this.checkServerStatus(), 30000); // Check every 30s
+            },
+
+            setupServiceWorker() {
+                if ('serviceWorker' in navigator) {
+                    const swCode = `
+                        const CACHE_NAME = 'field-review-v1';
+                        const urlsToCache = ['/index.html', '/manifest.json'];
+                        
+                        self.addEventListener('install', e => {
+                            e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
+                            self.skipWaiting();
+                        });
+                        
+                        self.addEventListener('activate', e => {
+                            e.waitUntil(caches.keys().then(names => Promise.all(names.map(name => caches.delete(name)))));
+                            self.clients.claim();
+                        });
+                        
+                        self.addEventListener('fetch', e => {
+                            if (e.request.method !== 'GET') return;
+                            e.respondWith(
+                                fetch(e.request).catch(() => {
+                                    return caches.match(e.request);
+                                })
+                            );
+                        });
+                    `;
+                    navigator.serviceWorker.register('data:application/javascript,' + encodeURIComponent(swCode)).catch(() => {});
+                }
+            },
+
+            // ===== STORAGE ===== 
+            loadState() {
+                const saved = localStorage.getItem('fieldReviewProjects');
+                this.state = saved ? JSON.parse(saved) : {};
+            },
+
+            saveState() {
+                localStorage.setItem('fieldReviewProjects', JSON.stringify(this.state));
+            },
+
+            loadSettings() {
+                const settings = JSON.parse(localStorage.getItem('fieldReviewSettings') || '{}');
+                this.serverUrl = settings.serverUrl || 'http://localhost:3000';
+                this.cloudStorageEnabled = settings.cloudStorageEnabled || { drive: false, dropbox: false };
+                document.getElementById('serverUrl').value = this.serverUrl;
+                document.getElementById('googleDriveEnabled').checked = this.cloudStorageEnabled.drive;
+                document.getElementById('dropboxEnabled').checked = this.cloudStorageEnabled.dropbox;
+            },
+
+            saveSettings() {
+                localStorage.setItem('fieldReviewSettings', JSON.stringify({
+                    serverUrl: this.serverUrl,
+                    cloudStorageEnabled: this.cloudStorageEnabled
+                }));
+            },
+
+            // ===== NAVIGATION ===== 
+            showScreen(screenId) {
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById(screenId).classList.add('active');
+            },
+
+            goBack() {
+                if (this.currentProject) {
+                    this.showScreen('projectDetailScreen');
+                } else {
+                    this.showScreen('projectListScreen');
+                }
+            },
+
+            goToTab(tab) {
+                // For future tab navigation
+            },
+
+            // ===== SERVER COMMUNICATION ===== 
+            async checkServerStatus() {
+                try {
+                    const response = await fetch(`${this.serverUrl}/health`, { timeout: 5000 });
+                    if (response.ok) {
+                        document.getElementById('serverIndicator').classList.remove('offline');
+                        document.getElementById('serverText').textContent = 'Server: Connected';
+                        this.updateSyncStatus('Connected', 'synced');
+                    } else {
+                        this.setServerOffline();
+                    }
+                } catch {
+                    this.setServerOffline();
+                }
+            },
+
+            setServerOffline() {
+                document.getElementById('serverIndicator').classList.add('offline');
+                document.getElementById('serverText').textContent = 'Server: Offline (local mode)';
+                this.updateSyncStatus('Offline', 'error');
+            },
+
+            updateSyncStatus(text, status) {
+                const el = document.getElementById('syncStatus');
+                if (el) {
+                    el.className = `sync-status ${status}`;
+                    el.textContent = text;
+                }
+            },
+
+            async testConnection() {
+                const btn = document.querySelector('[onclick="app.testConnection()"]');
+                const statusDiv = document.getElementById('connectionStatus');
+                
+                btn.disabled = true;
+                statusDiv.textContent = '⏳ Testing...';
+                
+                try {
+                    const response = await fetch(`${this.serverUrl}/health`);
+                    if (response.ok) {
+                        statusDiv.innerHTML = '<span style="color: #2e7d32;">✓ Server connected successfully!</span>';
+                        this.serverUrl = document.getElementById('serverUrl').value;
+                        this.saveSettings();
+                    } else {
+                        statusDiv.innerHTML = '<span style="color: #c62828;">✗ Server returned error</span>';
+                    }
+                } catch (err) {
+                    statusDiv.innerHTML = '<span style="color: #c62828;">✗ Cannot reach server: ' + err.message + '</span>';
+                }
+                
+                btn.disabled = false;
+            },
+
+            // ===== PROJECTS ===== 
+            renderProjectList() {
+                const list = document.getElementById('projectsList');
+                list.innerHTML = '<div class="project-card new-project-card" onclick="app.showModal(\'new-project\')"><div><div class="add-btn">+</div></div></div>';
+
+                Object.entries(this.state).forEach(([id, project]) => {
+                    const card = document.createElement('div');
+                    card.className = 'project-card';
+                    card.onclick = () => this.openProject(id);
+                    card.innerHTML = `
+                        <div class="project-icon">📁</div>
+                        <div class="project-name">${project.name}</div>
+                        <div class="project-meta">${project.items?.length || 0} items</div>
+                    `;
+                    list.appendChild(card);
+                });
+            },
+
+            createProject() {
+                const name = document.getElementById('projectNameInput').value.trim();
+                if (!name) return alert('Enter a project name');
+
+                const id = Date.now().toString();
+                this.state[id] = {
+                    id,
+                    name,
+                    createdAt: new Date().toISOString(),
+                    items: []
+                };
+
+                this.saveState();
+                this.closeModal();
+                document.getElementById('projectNameInput').value = '';
+                this.renderProjectList();
+                this.openProject(id);
+            },
+
+            openProject(id) {
+                this.currentProject = id;
+                this.renderProjectDetail();
+                this.showScreen('projectDetailScreen');
+            },
+
+            renderProjectDetail() {
+                const project = this.state[this.currentProject];
+                document.getElementById('projectTitle').textContent = project.name;
+                document.getElementById('photoCount').textContent = `${project.items?.length || 0} items`;
+
+                const grid = document.getElementById('photoGrid');
+                grid.innerHTML = '';
+
+                (project.items || []).forEach((item, idx) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'photo-item';
+                    wrapper.innerHTML = `
+                        <img src="${item.photo}" onclick="event.stopPropagation(); app.viewItem(${idx})" />
+                        <div class="photo-badge">${item.memo ? '🎤' : '📷'}</div>
+                        <div class="photo-actions">
+                            <button class="icon-btn" onclick="event.stopPropagation(); app.deleteItem(${idx})">🗑️</button>
+                            <button class="icon-btn" onclick="event.stopPropagation(); app.editItem(${idx})">✏️</button>
+                        </div>
+                    `;
+                    grid.appendChild(wrapper);
+                });
+            },
+
+            deleteProject() {
+                if (confirm('Delete this entire project?')) {
+                    delete this.state[this.currentProject];
+                    this.saveState();
+                    this.currentProject = null;
+                    this.renderProjectList();
+                    this.showScreen('projectListScreen');
+                }
+            },
+
+            // ===== CAMERA ===== 
+            async startCamera() {
+                try {
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                    });
+                    const video = document.getElementById('video');
+                    video.srcObject = this.stream;
+                    this.showScreen('cameraScreen');
+                } catch (err) {
+                    alert('Camera access denied. Please grant camera permission.');
+                }
+            },
+
+            capturePhoto() {
+                const video = document.getElementById('video');
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                
+                this.currentPhoto = canvas.toDataURL('image/jpeg');
+                document.getElementById('photoPreview').src = this.currentPhoto;
+                document.getElementById('cameraMode').style.display = 'none';
+                document.getElementById('previewMode').style.display = 'flex';
+            },
+
+            retakePhoto() {
+                document.getElementById('cameraMode').style.display = 'block';
+                document.getElementById('previewMode').style.display = 'none';
+            },
+
+            closeCamera() {
+                if (this.stream) {
+                    this.stream.getTracks().forEach(t => t.stop());
+                }
+                this.showScreen('projectDetailScreen');
+            },
+
+            // ===== VOICE MEMOS ===== 
+            async goToVoiceScreen(mode) {
+                this.showScreen('voiceMemoScreen');
+                
+                if (mode === 'new') {
+                    this.audioChunks = [];
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        this.mediaRecorder = new MediaRecorder(stream);
+                        
+                        this.mediaRecorder.ondataavailable = e => this.audioChunks.push(e.data);
+                        this.mediaRecorder.onstop = () => this.onRecordingStop();
+                        
+                        this.mediaRecorder.start();
+                        this.animateWaveform();
+                        document.getElementById('recordingMode').style.display = 'block';
+                        document.getElementById('playbackMode').style.display = 'none';
+                    } catch (err) {
+                        alert('Microphone access denied');
+                        this.goBack();
+                    }
+                }
+            },
+
+            animateWaveform() {
+                const waveform = document.getElementById('waveform');
+                waveform.innerHTML = '';
+                for (let i = 0; i < 20; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'wave-bar';
+                    bar.style.height = Math.random() * 100 + '%';
+                    waveform.appendChild(bar);
+                }
+
+                if (this.mediaRecorder?.state === 'recording') {
+                    setTimeout(() => this.animateWaveform(), 100);
+                }
+            },
+
+            stopRecording() {
+                if (this.mediaRecorder) {
+                    this.mediaRecorder.stop();
+                    this.mediaRecorder.stream.getTracks().forEach(t => t.stop());
+                }
+            },
+
+            async onRecordingStop() {
+                this.currentAudioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                
+                document.getElementById('recordingMode').style.display = 'none';
+                document.getElementById('playbackMode').style.display = 'block';
+                document.querySelector('.recording-dot').classList.add('inactive');
+                
+                // Start transcription
+                this.transcribeAudio();
+            },
+
+            async transcribeAudio() {
+                const textDiv = document.getElementById('transcriptionText');
+                const spinnerDiv = document.getElementById('transcriptionSpinner');
+                const saveBtn = document.getElementById('saveMemoBtn');
+                
+                try {
+                    // Create FormData for multipart upload
+                    const formData = new FormData();
+                    formData.append('audio', this.currentAudioBlob, 'memo.webm');
+                    formData.append('language', 'en');
+
+                    const response = await fetch(`${this.serverUrl}/api/transcribe`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        textDiv.textContent = data.transcription;
+                        spinnerDiv.style.display = 'none';
+                        saveBtn.disabled = false;
+                    } else {
+                        throw new Error('Transcription failed');
+                    }
+                } catch (err) {
+                    console.error('Transcription error:', err);
+                    textDiv.textContent = '[Transcription unavailable - server offline. Edit manually to add notes.]';
+                    spinnerDiv.style.display = 'none';
+                    saveBtn.disabled = false;
+                }
+            },
+
+            editTranscription() {
+                const text = document.getElementById('transcriptionText').textContent;
+                document.getElementById('transcriptionInput').value = text;
+                this.showModal('edit-transcription');
+            },
+
+            updateTranscription() {
+                const text = document.getElementById('transcriptionInput').value;
+                document.getElementById('transcriptionText').textContent = text;
+                this.closeModal();
+            },
+
+            saveMemo() {
+                const project = this.state[this.currentProject];
+                const memo = document.getElementById('transcriptionText').textContent;
+                
+                project.items.push({
+                    photo: this.currentPhoto,
+                    memo: memo,
+                    timestamp: new Date().toISOString()
+                });
+
+                this.saveState();
+                this.currentPhoto = null;
+                this.currentAudioBlob = null;
+                this.closeCamera();
+                this.renderProjectDetail();
+                this.showScreen('projectDetailScreen');
+            },
+
+            discardMemo() {
+                if (this.mediaRecorder?.state === 'recording') {
+                    this.mediaRecorder.stop();
+                }
+                this.currentPhoto = null;
+                this.currentAudioBlob = null;
+                this.closeCamera();
+                this.renderProjectDetail();
+                this.showScreen('projectDetailScreen');
+            },
+
+            // ===== ITEM MANAGEMENT ===== 
+            deleteItem(idx) {
+                if (confirm('Delete this photo & memo?')) {
+                    this.state[this.currentProject].items.splice(idx, 1);
+                    this.saveState();
+                    this.renderProjectDetail();
+                }
+            },
+
+            editItem(idx) {
+                const item = this.state[this.currentProject].items[idx];
+                document.getElementById('transcriptionInput').value = item.memo;
+                this.showModal('edit-transcription');
+                this._editingItemIdx = idx;
+            },
+
+            // ===== EXPORT ===== 
+            prepareExport() {
+                document.getElementById('reportTitle').value = this.state[this.currentProject].name;
+                document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('reportNotes').value = '';
+                document.getElementById('exportStatus').innerHTML = '';
+                this.showScreen('exportScreen');
+            },
+
+            async exportToWord() {
+                const title = document.getElementById('reportTitle').value;
+                const date = document.getElementById('reportDate').value;
+                const notes = document.getElementById('reportNotes').value;
+                const project = this.state[this.currentProject];
+                const btn = document.getElementById('exportBtn');
+                const statusDiv = document.getElementById('exportStatus');
+
+                if (!title.trim()) {
+                    statusDiv.innerHTML = '<div class="status-message error">Please enter a report title</div>';
+                    return;
+                }
+
+                btn.disabled = true;
+                statusDiv.innerHTML = '<div class="status-message"><div class="spinner" style="display: inline-block; margin-right: 8px;"></div>Generating Word document...</div>';
+
+                try {
+                    const payload = {
+                        title,
+                        date,
+                        notes,
+                        items: project.items
+                    };
+
+                    const response = await fetch(`${this.serverUrl}/api/generate-report`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        // Download the file
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${title.replace(/[^a-z0-9]/gi, '_')}.docx`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        a.remove();
+
+                        statusDiv.innerHTML = '<div class="status-message">✓ Report generated and downloaded!</div>';
+                        setTimeout(() => this.goBack(), 2000);
+                    } else {
+                        const error = await response.json();
+                        statusDiv.innerHTML = `<div class="status-message error">✗ Error: ${error.error}</div>`;
+                    }
+                } catch (err) {
+                    statusDiv.innerHTML = `<div class="status-message error">✗ Cannot reach server. Make sure backend is running at ${this.serverUrl}</div>`;
+                    console.error('Export error:', err);
+                } finally {
+                    btn.disabled = false;
+                }
+            },
+
+            // ===== CLOUD STORAGE ===== 
+            toggleCloudStorage(service) {
+                if (service === 'drive') {
+                    this.cloudStorageEnabled.drive = document.getElementById('googleDriveEnabled').checked;
+                    document.getElementById('googleDriveBtn').style.display = this.cloudStorageEnabled.drive ? 'block' : 'none';
+                } else if (service === 'dropbox') {
+                    this.cloudStorageEnabled.dropbox = document.getElementById('dropboxEnabled').checked;
+                    document.getElementById('dropboxBtn').style.display = this.cloudStorageEnabled.dropbox ? 'block' : 'none';
+                }
+                this.saveSettings();
+            },
+
+            connectGoogleDrive() {
+                alert('Google Drive integration:\n\n1. Set up OAuth at: https://console.cloud.google.com\n2. Add the credentials to your backend\n3. Projects will auto-backup to Google Drive\n\nFor now, manually export .docx files.');
+            },
+
+            connectDropbox() {
+                alert('Dropbox integration:\n\n1. Create app at: https://www.dropbox.com/developers/apps\n2. Add credentials to backend\n3. Automatic syncing will be enabled\n\nFor now, manually export .docx files.');
+            },
+
+            // ===== DATA MANAGEMENT ===== 
+            clearAllData() {
+                if (confirm('⚠️ This will permanently delete ALL local projects. This cannot be undone. Are you sure?')) {
+                    if (confirm('Really delete everything?')) {
+                        localStorage.removeItem('fieldReviewProjects');
+                        this.state = {};
+                        this.renderProjectList();
+                        this.goBack();
+                        alert('All data cleared.');
+                    }
+                }
+            },
+
+            // ===== MODALS ===== 
+            showModal(type) {
+                if (type === 'new-project') {
+                    document.getElementById('newProjectModal').classList.add('active');
+                    document.getElementById('projectNameInput').focus();
+                }
+            },
+
+            closeModal() {
+                document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            },
+
+            // ===== UTILS ===== 
+            viewItem(idx) {
+                const item = this.state[this.currentProject].items[idx];
+                alert(`📷 Photo #${idx + 1}\n\n📝 ${item.memo.substring(0, 100)}...`);
+            }
+        };
+
+        // ===== START APP ===== 
+        app.init();
+
+        // Close modals on outside click
+        document.querySelectorAll('.modal').forEach(m => {
+            m.addEventListener('click', (e) => {
+                if (e.target === m) app.closeModal();
+            });
+        });
+
+        // Enter key in modals
+        document.getElementById('projectNameInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') app.createProject();
+        });
+
+        // Update server URL on input
+        document.getElementById('serverUrl').addEventListener('change', (e) => {
+            app.serverUrl = e.target.value;
+        });
+    </script>
+</body>
+</html>

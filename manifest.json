@@ -1,0 +1,75 @@
+{
+  "name": "Field Review - Professional Field Documentation",
+  "short_name": "Field Review",
+  "description": "Offline-ready field review app with AI-powered voice transcription and professional Word report generation",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#2D5A8C",
+  "categories": ["business", "productivity"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%232D5A8C' width='540' height='720'/><text x='270' y='360' font-size='120' fill='white' text-anchor='middle' dominant-baseline='central'>📋</text></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%232D5A8C' width='192' height='192'/><text x='96' y='96' font-size='120' fill='white' text-anchor='middle' dominant-baseline='central'>📋</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%232D5A8C' width='512' height='512'/><text x='256' y='256' font-size='320' fill='white' text-anchor='middle' dominant-baseline='central'>📋</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Project",
+      "short_name": "New Project",
+      "description": "Start a new field review project",
+      "url": "/?shortcut=new-project",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%232D5A8C' width='96' height='96'/><text x='48' y='48' font-size='60' fill='white' text-anchor='middle' dominant-baseline='central'>➕</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Take Photo",
+      "short_name": "Take Photo",
+      "description": "Capture a photo for field review",
+      "url": "/?shortcut=camera",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%232D5A8C' width='96' height='96'/><text x='48' y='48' font-size='60' fill='white' text-anchor='middle' dominant-baseline='central'>📷</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "photo",
+          "accept": ["image/*"]
+        }
+      ]
+    }
+  }
+}
