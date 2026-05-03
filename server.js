@@ -27,10 +27,10 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Serve static files (PWA frontend)
+// Serve static files (PWA frontend - index.html, manifest.json, etc.)
 app.use(express.static(path.join(__dirname, '.')));
 
-// Serve index.html for the root route
+// Serve index.html for the root route and all non-API routes (PWA)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -144,7 +144,7 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
 
     // Send to OpenAI Whisper API
     const formData = new FormData();
-    formData.append('file', new Blob([audioBuffer], { type: req.file.mimetype }), req.file.originalname);
+    formData.append('file', fs.createReadStream(req.file.path), req.file.originalname);
     formData.append('model', 'whisper-1');
     formData.append('language', language);
 
@@ -155,7 +155,9 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
         headers: {
           ...formData.getHeaders(),
           'Authorization': `Bearer ${apiKey}`
-        }
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
       }
     );
 
