@@ -800,7 +800,7 @@
             audioChunks: [],
             stream: null,
             state: {},
-            serverUrl: 'http://localhost:3000',
+            serverUrl: window.location.origin,
             cloudStorageEnabled: { drive: false, dropbox: false },
 
             // ===== INIT ===== 
@@ -854,7 +854,7 @@
 
             loadSettings() {
                 const settings = JSON.parse(localStorage.getItem('fieldReviewSettings') || '{}');
-                this.serverUrl = settings.serverUrl || 'http://localhost:3000';
+                this.serverUrl = settings.serverUrl || window.location.origin;
                 this.cloudStorageEnabled = settings.cloudStorageEnabled || { drive: false, dropbox: false };
                 document.getElementById('serverUrl').value = this.serverUrl;
                 document.getElementById('googleDriveEnabled').checked = this.cloudStorageEnabled.drive;
