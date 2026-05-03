@@ -577,10 +577,7 @@
         <div id="projectListScreen" class="screen active">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px;">
                 <h2 style="font-size: 18px; font-weight: 500; margin: 0;">Projects</h2>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn-primary" onclick="app.showModal('new-project')">+ New</button>
-                    <button onclick="app.showScreen('settingsScreen'); app.goToTab('storage')" style="background: none; border: none; font-size: 18px; cursor: pointer;">⚙️</button>
-                </div>
+                <button onclick="app.showScreen('settingsScreen'); app.goToTab('storage')" style="background: none; border: none; font-size: 18px; cursor: pointer;">⚙️</button>
             </div>
             <div class="projects-list" id="projectsList">
                 <div class="project-card new-project-card" onclick="app.showModal('new-project')">
@@ -622,8 +619,13 @@
 
             <div class="camera-container">
                 <div id="cameraMode">
-                    <div class="video-preview">
-                        <video id="video" playsinline autoplay></video>
+                    <div class="video-preview" id="cameraContainer" style="position: relative; overflow: hidden;">
+                        <video id="video" playsinline autoplay style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s;"></video>
+                        <!-- Zoom controls -->
+                        <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 100;">
+                            <button onclick="app.zoomCamera(-0.2)" class="btn-secondary" style="padding: 10px 15px; font-size: 12px;">🔍- Out</button>
+                            <button onclick="app.zoomCamera(0.2)" class="btn-secondary" style="padding: 10px 15px; font-size: 12px;">🔍+ In</button>
+                        </div>
                     </div>
                     <div class="controls">
                         <button class="btn-danger" onclick="app.closeCamera()">Cancel</button>
@@ -1019,14 +1021,21 @@
             async startCamera() {
                 try {
                     this.stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
                     });
                     const video = document.getElementById('video');
                     video.srcObject = this.stream;
+                    this.zoomLevel = 1;
                     this.showScreen('cameraScreen');
                 } catch (err) {
                     alert('Camera access denied. Please grant camera permission.');
                 }
+            },
+
+            zoomCamera(change) {
+                this.zoomLevel = Math.max(1, Math.min(3, this.zoomLevel + change));
+                const video = document.getElementById('video');
+                video.style.transform = `scale(${this.zoomLevel})`;
             },
 
             capturePhoto() {
@@ -1242,14 +1251,20 @@
                     if (response.ok) {
                         // Download the file
                         const blob = await response.blob();
+                        const filename = `${title.replace(/[^a-z0-9]/gi, '_')}.docx`;
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = `${title.replace(/[^a-z0-9]/gi, '_')}.docx`;
+                        a.download = filename;
+                        a.style.display = 'none';
                         document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        a.remove();
+                        
+                        // Use setTimeout for better mobile support
+                        setTimeout(() => {
+                            a.click();
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+                        }, 100);
 
                         statusDiv.innerHTML = '<div class="status-message">✓ Report generated and downloaded!</div>';
                         setTimeout(() => this.goBack(), 2000);
