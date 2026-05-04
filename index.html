@@ -619,18 +619,9 @@
 
             <div class="camera-container">
                 <div id="cameraMode">
-                    <div class="video-preview" id="cameraContainer" style="position: relative; overflow: hidden;">
-                        <video id="video" playsinline autoplay style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s;"></video>
-                        <!-- Zoom controls -->
-                        <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 100;">
-                            <button onclick="app.zoomCamera(-0.2)" class="btn-secondary" style="padding: 10px 15px; font-size: 12px;">🔍- Out</button>
-                            <button onclick="app.zoomCamera(0.2)" class="btn-secondary" style="padding: 10px 15px; font-size: 12px;">🔍+ In</button>
-                        </div>
-                    </div>
-                    <div class="controls">
-                        <button class="btn-danger" onclick="app.closeCamera()">Cancel</button>
-                        <button class="btn-success" onclick="app.capturePhoto()" style="font-size: 16px;">📸 Capture</button>
-                    </div>
+                    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;" onchange="app.onCameraCapture(event)">
+                    <button class="btn-primary" onclick="document.getElementById('cameraInput').click()" style="width: 100%; padding: 1.5rem; font-size: 16px;">📱 Open Phone Camera</button>
+                    <p style="text-align: center; color: #666; margin-top: 1rem; font-size: 14px;">Uses your device's native camera app with full zoom and features</p>
                 </div>
 
                 <div id="previewMode" style="display: none;">
@@ -1019,23 +1010,24 @@
 
             // ===== CAMERA ===== 
             async startCamera() {
-                try {
-                    this.stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
-                    });
-                    const video = document.getElementById('video');
-                    video.srcObject = this.stream;
-                    this.zoomLevel = 1;
-                    this.showScreen('cameraScreen');
-                } catch (err) {
-                    alert('Camera access denied. Please grant camera permission.');
-                }
+                // Just show the camera button - native app handles everything
+                this.showScreen('cameraScreen');
             },
 
-            zoomCamera(change) {
-                this.zoomLevel = Math.max(1, Math.min(3, this.zoomLevel + change));
-                const video = document.getElementById('video');
-                video.style.transform = `scale(${this.zoomLevel})`;
+            onCameraCapture(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.currentPhoto = e.target.result;
+                        document.getElementById('photoPreview').src = this.currentPhoto;
+                        document.getElementById('cameraMode').style.display = 'none';
+                        document.getElementById('previewMode').style.display = 'flex';
+                    };
+                    reader.readAsDataURL(file);
+                }
+                // Reset input so same file can be selected again
+                event.target.value = '';
             },
 
             capturePhoto() {
@@ -1054,13 +1046,6 @@
             retakePhoto() {
                 document.getElementById('cameraMode').style.display = 'block';
                 document.getElementById('previewMode').style.display = 'none';
-            },
-
-            closeCamera() {
-                if (this.stream) {
-                    this.stream.getTracks().forEach(t => t.stop());
-                }
-                this.showScreen('projectDetailScreen');
             },
 
             // ===== VOICE MEMOS ===== 
