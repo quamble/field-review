@@ -1140,7 +1140,7 @@
             editTranscription() {
                 const text = document.getElementById('transcriptionText').textContent;
                 document.getElementById('transcriptionInput').value = text;
-                this.showModal('edit-transcription');
+                this.showModal('editTranscriptionModal');
             },
 
             updateTranscription() {
@@ -1190,7 +1190,7 @@
             editItem(idx) {
                 const item = this.state[this.currentProject].items[idx];
                 document.getElementById('transcriptionInput').value = item.memo;
-                this.showModal('edit-transcription');
+                this.showModal('editTranscriptionModal');
                 this._editingItemIdx = idx;
             },
 
